@@ -5,47 +5,25 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2e84cc45-dc20-4b3e-8731-0cacc14ea21a" name="Changes" comment="all files">
-      <change afterPath="$PROJECT_DIR$/read_file.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/train_model.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/configuration.env" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/predict.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/game_details.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/groups.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/index.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LICENSE" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/PremierLeague.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/away_analysis_2023_2024.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bundesliga_away_analysis.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bundesliga_home_analysis.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bundesliga_total_analysis.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/champions.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/championship.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/championship_away_analysis.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/championship_home_analysis.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/championship_total_analysis.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dass.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dockerfile" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/epl_away_analysis.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/epl_home_analysis.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/epl_total_analysis.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/head_to_head_and_form_results.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/home_analysis_2023_2024.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/matches.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/matchesitaly.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/next_fixtures.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/predicted_next_matches.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/predicted_next_matches_LinearRegression.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/predicted_next_matches_LogisticRegression.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/predicted_next_matches_Logistic_Linear.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/predicted_next_matches_RandomForest.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/predicted_next_matches_RandomForestClassifier.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/predicted_next_matches_RandomForestRegressor.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/predicted_next_matches_SVC.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/predicted_next_matches_SVC_SVR.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/predicted_next_matches_SVR.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/serieA_away_analysis.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/serieA_home_analysis.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/serieA_total_analysis.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/total_analysis_2023_2024.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/static/football.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/train_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/train_model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/webpage/dashboard.php" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/webpage/db_config.php" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/webpage/login.php" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/webpage/logout.php" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/webpage/register.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/webpage/register.php" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/webpage/signup.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/webpage/signup/styles.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/webpage/styles.css" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -56,6 +34,7 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="Python Script" />
+        <option value="HTML File" />
       </list>
     </option>
   </component>
@@ -84,6 +63,7 @@
   "keyToString": {
     "ASKED_ADD_EXTERNAL_FILES": "true",
     "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "DefaultHtmlFileTemplate": "HTML File",
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
@@ -160,7 +140,14 @@
       <option name="project" value="LOCAL" />
       <updated>1718533431263</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="all files">
+      <created>1718541710193</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1718541710193</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">

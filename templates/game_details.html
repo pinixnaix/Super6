@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Details</title>
+</head>
+<body>
+    <h1>Game Details: {{ team1 }} vs {{ team2 }}</h1>
+    <h2>Predictions</h2>
+    <p>Home Goals: {{ home_goals_pred }}</p>
+    <p>Away Goals: {{ away_goals_pred }}</p>
+    <p>Both Teams to Score Probability: {{ both_teams_to_score_prob }}%</p>
+    <p>Match Result: {{ match_result }}</p>
+
+    <h2>Team Form</h2>
+    <h3>{{ team1 }}</h3>
+    <ul>
+        {% for game in form_team1 %}
+            <li>{{ game }}</li>
+        {% endfor %}
+    </ul>
+
+    <h3>{{ team2 }}</h3>
+    <ul>
+        {% for game in form_team2 %}
+            <li>{{ game }}</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Head-to-Head Games</h2>
+    <ul>
+        {% for game in games_team1 %}
+            <li>{{ game }}</li>
+        {% endfor %}
+    </ul>
+
+    <nav>
+        <a href="/groups">Back to Groups and Fixtures</a>
+    </nav>
+</body>
+</html>

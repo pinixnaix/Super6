@@ -3,6 +3,7 @@ import logging
 import joblib
 import numpy as np
 import pandas as pd
+from typing import Dict, Tuple, Any, List
 from influxdb_client import InfluxDBClient
 from sklearn.linear_model import Ridge, LogisticRegression
 from xgboost import XGBClassifier, XGBRegressor
@@ -34,19 +35,16 @@ MODEL_FILES = {
     'dataset': 'dataset.joblib'
 }
 UEFA_TEAM_RANKINGS = {
-    "Germany": 4, "Scotland": 11, "Hungary": 24, "Switzerland": 12, "Spain": 3,
-    "Croatia": 20, "Italy": 2, "Albania": 47, "Poland": 21, "Netherlands": 6,
-    "Slovenia": 30, "Denmark": 16, "Serbia": 19, "England": 1, "Romania": 26,
-    "Ukraine": 18, "Belgium": 8, "Slovakia": 29, "Austria": 13, "France": 5,
-    "Turkey": 9, "Georgia": 46, "Portugal": 7, "Czech Republic": 10
+    "Germany": 15, "Scotland": 31, "Hungary": 32, "Switzerland": 12, "Spain": 10, "Croatia": 6,
+    "Italy": 8, "Albania": 59, "Poland": 25, "Netherlands": 7, "Slovenia": 63, "Denmark": 19,
+    "Serbia": 22, "England": 4, "Romania": 29, "Ukraine": 21, "Belgium": 5, "Slovakia": 44,
+    "Austria": 27, "France": 2, "Turkey": 36, "Georgia": 48, "Portugal": 9, "Czech Republic": 28
 }
-
 
 class DataLoadError(Exception):
     pass
 
-
-def init_influxdb_client():
+def init_influxdb_client() -> Any:
     logging.info('Initializing InfluxDB client')
     try:
         client = InfluxDBClient(url=INFLUXDB_URL, token=INFLUXDB_TOKEN, org=INFLUXDB_ORG)
@@ -56,34 +54,29 @@ def init_influxdb_client():
         logging.error('Error initializing InfluxDB client: %s', e)
         raise DataLoadError('Failed to initialize InfluxDB client')
 
-
 query_api = init_influxdb_client()
 
-
-def query_influxdb(query):
+def query_influxdb(query: str) -> Any:
     try:
         return query_api.query(query=query)
     except Exception as e:
         logging.error('Error querying data: %s', e)
         return []
 
-
-def save_models(models, poly_features, scaler):
+def save_models(models: Dict[str, Any], poly_features: PolynomialFeatures, scaler: StandardScaler) -> None:
     for name, model in models.items():
         joblib.dump(model, MODEL_FILES[name])
     joblib.dump(poly_features, MODEL_FILES['poly_features'])
     joblib.dump(scaler, MODEL_FILES['scaler'])
 
-
-def load_dataset():
+def load_dataset() -> Tuple:
     try:
         return joblib.load(MODEL_FILES['dataset'])
     except Exception as e:
         logging.error('Error loading dataset: %s', e)
         raise DataLoadError('Failed to load dataset')
 
-
-def get_team_games(team_name):
+def get_team_games(team_name: str) -> pd.DataFrame:
     logging.info(f'Querying games for team: {team_name}')
     query = f'''
     from(bucket: "{INFLUXDB_BUCKET}")
@@ -107,12 +100,11 @@ def get_team_games(team_name):
         }
         for table in tables for record in table.records
     ]
-    games.sort(key=lambda x: x["time"])  # Sort games by time
-    logging.info(f'Found {len(games)} games for team: {team_name}')
-    return games
+    df_games = pd.DataFrame(games).sort_values(by="time").reset_index(drop=True)
+    logging.info(f'Found {len(df_games)} games for team: {team_name}')
+    return df_games
 
-
-def get_all_teams():
+def get_all_teams() -> List[str]:
     logging.info('Querying for all unique teams')
     query_teams = f'''
     from(bucket: "{INFLUXDB_BUCKET}")
@@ -123,33 +115,28 @@ def get_all_teams():
       |> distinct(column: "away_team")
     '''
     tables = query_influxdb(query_teams)
-    teams = {record.values.get("home_team") or record.values.get("away_team") for table in tables for record in
-             table.records}
+    teams = {record.values.get("home_team") or record.values.get("away_team") for table in tables for record in table.records}
     logging.info('Found %d unique teams', len(teams))
     return list(teams)
 
-
-def create_dataset(force_recreate=False):
+def create_dataset(force_recreate: bool = False) -> Tuple:
     if os.path.exists(MODEL_FILES['dataset']) and not force_recreate:
         logging.info('Loading existing dataset')
         return load_dataset()
 
     all_teams = get_all_teams()
-    all_games = []
-    for team in all_teams:
-        all_games.extend(get_team_games(team))
+    all_games = pd.concat([get_team_games(team) for team in all_teams], ignore_index=True)
 
-    if not all_games:
+    if all_games.empty:
         logging.error('No games found for any team.')
         return np.array([]), np.array([]), np.array([]), np.array([]), np.array([]), None, None
 
-    data = pd.DataFrame(all_games)
-    logging.info(f'Total games collected: {len(data)}')
+    logging.info(f'Total games collected: {len(all_games)}')
 
     features, targets_home, targets_away, targets_bt, targets_result = [], [], [], [], []
 
-    for index, row in data.iterrows():
-        logging.info(f'Processing game {index} of {len(data)}')
+    for index, row in all_games.iterrows():
+        logging.info(f'Processing game {index} of {len(all_games)}')
         team1, team2 = row['home_team'], row['away_team']
 
         feature = create_features(team1, team2)
@@ -171,15 +158,12 @@ def create_dataset(force_recreate=False):
     scaler = StandardScaler()
     features = scaler.fit_transform(features)
 
-    dataset = (
-    features, np.array(targets_home), np.array(targets_away), np.array(targets_bt), np.array(targets_result), poly,
-    scaler)
+    dataset = (features, np.array(targets_home), np.array(targets_away), np.array(targets_bt), np.array(targets_result), poly, scaler)
     joblib.dump(dataset, MODEL_FILES['dataset'])
     logging.info('Dataset saved successfully')
     return dataset
 
-
-def create_features(team1, team2):
+def create_features(team1: str, team2: str) -> np.ndarray:
     logging.info(f'Creating features for match: {team1} vs {team2}')
     form_team1 = get_team_form(team1)
     form_team2 = get_team_form(team2)
@@ -207,8 +191,7 @@ def create_features(team1, team2):
     logging.info(f'Features created for match: {team1} vs {team2}')
     return np.array(features)
 
-
-def get_team_form(team, num_games=4):
+def get_team_form(team: str, num_games: int = 4) -> Dict[str, float]:
     query = f'''
     from(bucket: "{INFLUXDB_BUCKET}")
       |> range(start: -4y)
@@ -240,11 +223,9 @@ def get_team_form(team, num_games=4):
         "home_total_scored": 0, "home_total_conceded": 0,
         "away_total_scored": 0, "away_total_conceded": 0,
         "home_over_0_5_scored": 0, "home_over_1_5_scored": 0, "home_over_2_5_scored": 0, "home_over_3_5_scored": 0,
-        "home_over_0_5_conceded": 0, "home_over_1_5_conceded": 0, "home_over_2_5_conceded": 0,
-        "home_over_3_5_conceded": 0,
+        "home_over_0_5_conceded": 0, "home_over_1_5_conceded": 0, "home_over_2_5_conceded": 0, "home_over_3_5_conceded": 0,
         "away_over_0_5_scored": 0, "away_over_1_5_scored": 0, "away_over_2_5_scored": 0, "away_over_3_5_scored": 0,
-        "away_over_0_5_conceded": 0, "away_over_1_5_conceded": 0, "away_over_2_5_conceded": 0,
-        "away_over_3_5_conceded": 0
+        "away_over_0_5_conceded": 0, "away_over_1_5_conceded": 0, "away_over_2_5_conceded": 0, "away_over_3_5_conceded": 0
     }
 
     for game in games:
@@ -319,12 +300,10 @@ def get_team_form(team, num_games=4):
 
     return form
 
-
-def valid_scores(home_score, away_score):
+def valid_scores(home_score: int, away_score: int) -> bool:
     return home_score is not None and away_score is not None
 
-
-def get_games_between_teams(team1, team2):
+def get_games_between_teams(team1: str, team2: str) -> List[Dict]:
     logging.info(f'Querying head-to-head games between {team1} and {team2}')
     query = f'''
     from(bucket: "{INFLUXDB_BUCKET}")
@@ -352,11 +331,10 @@ def get_games_between_teams(team1, team2):
     logging.info(f'Found {len(games)} head-to-head games between {team1} and {team2}')
     return games
 
-
-def tune_hyperparameters(features, targets, model_type):
+def tune_hyperparameters(features: np.ndarray, targets: np.ndarray, model_type: str) -> Dict:
     logging.info(f'Tuning hyperparameters for {model_type} model')
 
-    def objective(trial, features, targets, model_type):
+    def objective(trial: optuna.trial.Trial, features: np.ndarray, targets: np.ndarray, model_type: str) -> float:
         if model_type == 'ridge':
             alpha = trial.suggest_float('alpha', 1e-4, 1e2, log=True)
             model = Ridge(alpha=alpha)
@@ -385,8 +363,7 @@ def tune_hyperparameters(features, targets, model_type):
     study.optimize(lambda trial: objective(trial, features, targets, model_type), n_trials=50)
     return study.best_params
 
-
-def train_models():
+def train_models() -> None:
     features, home_goals, away_goals, both_teams_to_score, match_results, poly, scaler = create_dataset()
     if features.size == 0:
         logging.error('No data available for training models.')
@@ -422,8 +399,7 @@ def train_models():
 
     logging.info('Models trained and saved successfully')
 
-
-def predict_match_outcome(team1, team2):
+def predict_match_outcome(team1: str, team2: str) -> Dict[str, Any]:
     try:
         models = {
             'home_goals': joblib.load(MODEL_FILES['home_goals']),
@@ -435,7 +411,7 @@ def predict_match_outcome(team1, team2):
         scaler = joblib.load(MODEL_FILES['scaler'])
     except FileNotFoundError as e:
         logging.error('Model file not found: %s', e)
-        return
+        return {}
 
     feature = create_features(team1, team2).reshape(1, -1)
     feature = poly.transform(feature)
@@ -455,7 +431,7 @@ def predict_match_outcome(team1, team2):
 
 
 if __name__ == '__main__':
-
+    train_models()
     matches = [
         ("Germany", "Scotland"),
         ("Hungary", "Switzerland"),
@@ -474,7 +450,7 @@ if __name__ == '__main__':
         team1, team2 = match
         predictions = predict_match_outcome(team2, team1)
         print(f"Predicted outcome for {team2} vs {team1}")
-        print(f"  Game Result Prediction: {predictions['match_result']}")
-        print(f"  Predicted Home Goals: {predictions['home_goals']:.2f}")
-        print(f"  Predicted Away Goals: {predictions['away_goals']:.2f}")
-        print(f"  Both Teams to Score: {predictions['both_teams_to_score']}\n")
+        print(f"  Game Result Prediction: {predictions.get('match_result', 'N/A')}")
+        print(f"  Predicted Home Goals: {predictions.get('home_goals', 'N/A'):.2f}")
+        print(f"  Predicted Away Goals: {predictions.get('away_goals', 'N/A'):.2f}")
+        print(f"  Both Teams to Score: {predictions.get('both_teams_to_score', 'N/A')}\n")

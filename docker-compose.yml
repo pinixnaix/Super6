@@ -1,0 +1,26 @@
+networks:
+  network:
+    driver: bridge
+
+services:
+  influxdb:
+    container_name: influxdb
+    image: influxdb:latest
+    env_file: configuration.env
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+      - influxdb_config:/etc/influxdb2
+    restart: unless-stopped
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  influxdb_data:
+  influxdb_config:

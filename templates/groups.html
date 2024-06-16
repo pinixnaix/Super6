@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UEFA Euros 2024 Groups and Fixtures</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>UEFA Euros 2024 Groups and Fixtures</h1>
+    {% for group, teams in groups_data.items() %}
+        <h2>{{ group }}</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Team</th>
+                    <th>Pl</th>
+                    <th>W</th>
+                    <th>D</th>
+                    <th>L</th>
+                    <th>F</th>
+                    <th>A</th>
+                    <th>GD</th>
+                    <th>Pts</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for team in teams %}
+                    <tr>
+                        <td>{{ team.team }}</td>
+                        <td>{{ team.pl }}</td>
+                        <td>{{ team.w }}</td>
+                        <td>{{ team.d }}</td>
+                        <td>{{ team.l }}</td>
+                        <td>{{ team.f }}</td>
+                        <td>{{ team.a }}</td>
+                        <td>{{ team.gd }}</td>
+                        <td>{{ team.pts }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endfor %}
+
+    <h2>Fixtures</h2>
+    {% for fixture in fixtures %}
+        <h3>{{ fixture.date }}</h3>
+        <ul>
+            {% for match in fixture.matches %}
+                <li>{{ match }}</li>
+            {% endfor %}
+        </ul>
+    {% endfor %}
+    <nav>
+        <a href="/">Back to Home</a>
+    </nav>
+</body>
+</html>
