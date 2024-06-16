@@ -20,8 +20,8 @@ logging.info('"date" column converted successfully')
 # Initialize the InfluxDB client
 INFLUXDB_URL = "http://localhost:8086"
 INFLUXDB_TOKEN = "my-super-secret-auth-token"
-INFLUXDB_ORG = "super6"
-INFLUXDB_BUCKET = "international"
+INFLUXDB_ORG = "PinaCode"
+INFLUXDB_BUCKET = "Euros2024"
 
 logging.info('Initializing InfluxDB client')
 client = InfluxDBClient(url=INFLUXDB_URL, token=INFLUXDB_TOKEN, org=INFLUXDB_ORG)
@@ -37,7 +37,6 @@ for index, row in data.iterrows():
             .tag("home_team", row['home_team']) \
             .tag("away_team", row['away_team']) \
             .tag("tournament", row['tournament']) \
-            .tag("city", row['city']) \
             .tag("country", row['country']) \
             .tag("neutral", str(row['neutral'])) \
             .field("home_score", row['home_score']) \

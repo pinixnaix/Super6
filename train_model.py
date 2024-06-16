@@ -108,7 +108,7 @@ def get_all_teams() -> List[str]:
     logging.info('Querying for all unique teams')
     query_teams = f'''
     from(bucket: "{INFLUXDB_BUCKET}")
-      |> range(start: -4y)
+      |> range(start: 0)
       |> filter(fn: (r) => r._measurement == "match_results")
       |> keep(columns: ["home_team", "away_team"])
       |> distinct(column: "home_team")
@@ -194,7 +194,7 @@ def create_features(team1: str, team2: str) -> np.ndarray:
 def get_team_form(team: str, num_games: int = 4) -> Dict[str, float]:
     query = f'''
     from(bucket: "{INFLUXDB_BUCKET}")
-      |> range(start: -4y)
+      |> range(start: -2y)
       |> filter(fn: (r) => r._measurement == "match_results")
       |> filter(fn: (r) => r.home_team == "{team}" or r.away_team == "{team}")
       |> sort(columns: ["_time"], desc: true)
@@ -429,9 +429,7 @@ def predict_match_outcome(team1: str, team2: str) -> Dict[str, Any]:
         "match_result": ["Draw", team1, team2][int(match_result)]
     }
 
-
 if __name__ == '__main__':
-    train_models()
     matches = [
         ("Germany", "Scotland"),
         ("Hungary", "Switzerland"),
