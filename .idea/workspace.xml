@@ -4,14 +4,67 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2e84cc45-dc20-4b3e-8731-0cacc14ea21a" name="Changes" comment="all files" />
+    <list default="true" id="2e84cc45-dc20-4b3e-8731-0cacc14ea21a" name="Changes" comment="all files">
+      <change afterPath="$PROJECT_DIR$/read_file.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/train_model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/LICENSE" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/PremierLeague.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/away_analysis_2023_2024.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/bundesliga_away_analysis.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/bundesliga_home_analysis.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/bundesliga_total_analysis.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/champions.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/championship.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/championship_away_analysis.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/championship_home_analysis.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/championship_total_analysis.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dass.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dockerfile" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/epl_away_analysis.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/epl_home_analysis.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/epl_total_analysis.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/head_to_head_and_form_results.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/home_analysis_2023_2024.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/matches.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/matchesitaly.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/next_fixtures.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/predicted_next_matches.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/predicted_next_matches_LinearRegression.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/predicted_next_matches_LogisticRegression.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/predicted_next_matches_Logistic_Linear.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/predicted_next_matches_RandomForest.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/predicted_next_matches_RandomForestClassifier.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/predicted_next_matches_RandomForestRegressor.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/predicted_next_matches_SVC.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/predicted_next_matches_SVC_SVR.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/predicted_next_matches_SVR.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/serieA_away_analysis.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/serieA_home_analysis.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/serieA_total_analysis.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/total_analysis_2023_2024.csv" beforeDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Merge.Settings">
+    <option name="BRANCH" value="origin/main" />
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="SWAP_SIDES_IN_COMPARE_BRANCHES" value="true" />
   </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
@@ -27,17 +80,21 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ASKED_ADD_EXTERNAL_FILES&quot;: &quot;true&quot;,
-    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ASKED_ADD_EXTERNAL_FILES": "true",
+    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "ignore.virus.scanning.warn.message": "true",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PythonContentEntriesConfigurable"
+  },
+  "keyToStringList": {
+    "ChangesTree.GroupingKeys": [
+    ]
   }
-}</component>
+}]]></component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
