@@ -7,12 +7,13 @@ from typing import Dict, Tuple, Any, List
 from influxdb_client import InfluxDBClient
 from sklearn.linear_model import Ridge, LogisticRegression
 from xgboost import XGBClassifier, XGBRegressor
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split, cross_val_score, KFold
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 import optuna
 from sklearn.metrics import make_scorer, mean_absolute_error, accuracy_score
 from sklearn.exceptions import ConvergenceWarning
 import warnings
+from sklearn.ensemble import VotingClassifier
 
 # Suppress Convergence Warnings
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
@@ -41,8 +42,10 @@ UEFA_TEAM_RANKINGS = {
     "Austria": 27, "France": 2, "Turkey": 36, "Georgia": 48, "Portugal": 9, "Czech Republic": 28
 }
 
+
 class DataLoadError(Exception):
     pass
+
 
 def init_influxdb_client() -> Any:
     logging.info('Initializing InfluxDB client')
@@ -54,7 +57,9 @@ def init_influxdb_client() -> Any:
         logging.error('Error initializing InfluxDB client: %s', e)
         raise DataLoadError('Failed to initialize InfluxDB client')
 
+
 query_api = init_influxdb_client()
+
 
 def query_influxdb(query: str) -> Any:
     try:
@@ -63,11 +68,13 @@ def query_influxdb(query: str) -> Any:
         logging.error('Error querying data: %s', e)
         return []
 
+
 def save_models(models: Dict[str, Any], poly_features: PolynomialFeatures, scaler: StandardScaler) -> None:
     for name, model in models.items():
         joblib.dump(model, MODEL_FILES[name])
     joblib.dump(poly_features, MODEL_FILES['poly_features'])
     joblib.dump(scaler, MODEL_FILES['scaler'])
+
 
 def load_dataset() -> Tuple:
     try:
@@ -75,6 +82,7 @@ def load_dataset() -> Tuple:
     except Exception as e:
         logging.error('Error loading dataset: %s', e)
         raise DataLoadError('Failed to load dataset')
+
 
 def get_team_games(team_name: str) -> pd.DataFrame:
     logging.info(f'Querying games for team: {team_name}')
@@ -104,6 +112,7 @@ def get_team_games(team_name: str) -> pd.DataFrame:
     logging.info(f'Found {len(df_games)} games for team: {team_name}')
     return df_games
 
+
 def get_all_teams() -> List[str]:
     logging.info('Querying for all unique teams')
     query_teams = f'''
@@ -115,9 +124,11 @@ def get_all_teams() -> List[str]:
       |> distinct(column: "away_team")
     '''
     tables = query_influxdb(query_teams)
-    teams = {record.values.get("home_team") or record.values.get("away_team") for table in tables for record in table.records}
+    teams = {record.values.get("home_team") or record.values.get("away_team") for table in tables for record in
+             table.records}
     logging.info('Found %d unique teams', len(teams))
     return list(teams)
+
 
 def create_dataset(force_recreate: bool = False) -> Tuple:
     if os.path.exists(MODEL_FILES['dataset']) and not force_recreate:
@@ -158,10 +169,13 @@ def create_dataset(force_recreate: bool = False) -> Tuple:
     scaler = StandardScaler()
     features = scaler.fit_transform(features)
 
-    dataset = (features, np.array(targets_home), np.array(targets_away), np.array(targets_bt), np.array(targets_result), poly, scaler)
+    dataset = (
+    features, np.array(targets_home), np.array(targets_away), np.array(targets_bt), np.array(targets_result), poly,
+    scaler)
     joblib.dump(dataset, MODEL_FILES['dataset'])
     logging.info('Dataset saved successfully')
     return dataset
+
 
 def create_features(team1: str, team2: str) -> np.ndarray:
     logging.info(f'Creating features for match: {team1} vs {team2}')
@@ -184,17 +198,38 @@ def create_features(team1: str, team2: str) -> np.ndarray:
     features = [
         form_team1["avg_scored"], form_team1["avg_goal_dif"], form_team1["avg_conceded"],
         form_team1["wins"], form_team1["draws"], form_team1["losses"],
+        form_team1["home_total_scored"], form_team1["home_total_conceded"],
+        form_team1["away_total_scored"], form_team1["away_total_conceded"],
+        form_team1["home_over_0_5_scored"], form_team1["home_over_1_5_scored"], form_team1["home_over_2_5_scored"],
+        form_team1["home_over_3_5_scored"],
+        form_team1["home_over_0_5_conceded"], form_team1["home_over_1_5_conceded"],
+        form_team1["home_over_2_5_conceded"], form_team1["home_over_3_5_conceded"],
+        form_team1["away_over_0_5_scored"], form_team1["away_over_1_5_scored"], form_team1["away_over_2_5_scored"],
+        form_team1["away_over_3_5_scored"],
+        form_team1["away_over_0_5_conceded"], form_team1["away_over_1_5_conceded"],
+        form_team1["away_over_2_5_conceded"], form_team1["away_over_3_5_conceded"],
         form_team2["avg_scored"], form_team2["avg_goal_dif"], form_team2["avg_conceded"],
         form_team2["wins"], form_team2["draws"], form_team2["losses"],
+        form_team2["home_total_scored"], form_team2["home_total_conceded"],
+        form_team2["away_total_scored"], form_team2["away_total_conceded"],
+        form_team2["home_over_0_5_scored"], form_team2["home_over_1_5_scored"], form_team2["home_over_2_5_scored"],
+        form_team2["home_over_3_5_scored"],
+        form_team2["home_over_0_5_conceded"], form_team2["home_over_1_5_conceded"],
+        form_team2["home_over_2_5_conceded"], form_team2["home_over_3_5_conceded"],
+        form_team2["away_over_0_5_scored"], form_team2["away_over_1_5_scored"], form_team2["away_over_2_5_scored"],
+        form_team2["away_over_3_5_scored"],
+        form_team2["away_over_0_5_conceded"], form_team2["away_over_1_5_conceded"],
+        form_team2["away_over_2_5_conceded"], form_team2["away_over_3_5_conceded"],
         h2h_team1_wins, h2h_team2_wins, h2h_draws, ranking_team1, ranking_team2
     ]
     logging.info(f'Features created for match: {team1} vs {team2}')
     return np.array(features)
 
+
 def get_team_form(team: str, num_games: int = 4) -> Dict[str, float]:
     query = f'''
     from(bucket: "{INFLUXDB_BUCKET}")
-      |> range(start: -4y)
+      |> range(start: -2y)
       |> filter(fn: (r) => r._measurement == "match_results")
       |> filter(fn: (r) => r.home_team == "{team}" or r.away_team == "{team}")
       |> sort(columns: ["_time"], desc: true)
@@ -223,9 +258,11 @@ def get_team_form(team: str, num_games: int = 4) -> Dict[str, float]:
         "home_total_scored": 0, "home_total_conceded": 0,
         "away_total_scored": 0, "away_total_conceded": 0,
         "home_over_0_5_scored": 0, "home_over_1_5_scored": 0, "home_over_2_5_scored": 0, "home_over_3_5_scored": 0,
-        "home_over_0_5_conceded": 0, "home_over_1_5_conceded": 0, "home_over_2_5_conceded": 0, "home_over_3_5_conceded": 0,
+        "home_over_0_5_conceded": 0, "home_over_1_5_conceded": 0, "home_over_2_5_conceded": 0,
+        "home_over_3_5_conceded": 0,
         "away_over_0_5_scored": 0, "away_over_1_5_scored": 0, "away_over_2_5_scored": 0, "away_over_3_5_scored": 0,
-        "away_over_0_5_conceded": 0, "away_over_1_5_conceded": 0, "away_over_2_5_conceded": 0, "away_over_3_5_conceded": 0
+        "away_over_0_5_conceded": 0, "away_over_1_5_conceded": 0, "away_over_2_5_conceded": 0,
+        "away_over_3_5_conceded": 0
     }
 
     for game in games:
@@ -300,8 +337,10 @@ def get_team_form(team: str, num_games: int = 4) -> Dict[str, float]:
 
     return form
 
+
 def valid_scores(home_score: int, away_score: int) -> bool:
     return home_score is not None and away_score is not None
+
 
 def get_games_between_teams(team1: str, team2: str) -> List[Dict]:
     logging.info(f'Querying head-to-head games between {team1} and {team2}')
@@ -331,13 +370,14 @@ def get_games_between_teams(team1: str, team2: str) -> List[Dict]:
     logging.info(f'Found {len(games)} head-to-head games between {team1} and {team2}')
     return games
 
+
 def tune_hyperparameters(features: np.ndarray, targets: np.ndarray, model_type: str) -> Dict:
     logging.info(f'Tuning hyperparameters for {model_type} model')
 
     def objective(trial: optuna.trial.Trial, features: np.ndarray, targets: np.ndarray, model_type: str) -> float:
         if model_type == 'ridge':
             alpha = trial.suggest_float('alpha', 1e-4, 1e2, log=True)
-            model = Ridge(alpha=alpha)
+            model = Ridge(alpha=alpha, positive=True)  # Ensure non-negative predictions
             scorer = make_scorer(mean_absolute_error, greater_is_better=False)
         elif model_type == 'logistic':
             C = trial.suggest_float('C', 1e-4, 1e2, log=True)
@@ -356,12 +396,14 @@ def tune_hyperparameters(features: np.ndarray, targets: np.ndarray, model_type: 
         else:
             raise ValueError(f"Unsupported model type: {model_type}")
 
-        scores = cross_val_score(model, features, targets, cv=5, scoring=scorer)
+        kf = KFold(n_splits=5)
+        scores = cross_val_score(model, features, targets, cv=kf, scoring=scorer)
         return scores.mean()
 
     study = optuna.create_study(direction='maximize' if model_type != 'ridge' else 'minimize')
     study.optimize(lambda trial: objective(trial, features, targets, model_type), n_trials=50)
     return study.best_params
+
 
 def train_models() -> None:
     features, home_goals, away_goals, both_teams_to_score, match_results, poly, scaler = create_dataset()
@@ -383,21 +425,31 @@ def train_models() -> None:
     logging.info('Tuning hyperparameters for match result model')
     best_params_result = tune_hyperparameters(X_train, y_train_result, 'xgboost')
 
-    home_goals_model = Ridge(**best_params_home_goals).fit(X_train, y_train_home)
-    away_goals_model = Ridge(**best_params_away_goals).fit(X_train, y_train_away)
+    home_goals_model = Ridge(**best_params_home_goals, positive=True).fit(X_train,
+                                                                          y_train_home)  # Ensure non-negative predictions
+    away_goals_model = Ridge(**best_params_away_goals, positive=True).fit(X_train,
+                                                                          y_train_away)  # Ensure non-negative predictions
     both_teams_to_score_model = LogisticRegression(**best_params_bt, max_iter=1000).fit(X_train, y_train_bt)
     match_result_model = XGBClassifier(**best_params_result).fit(X_train, y_train_result)
+
+    voting_classifier = VotingClassifier(estimators=[
+        ('lr', LogisticRegression(**best_params_bt, max_iter=1000)),
+        ('xgb', XGBClassifier(**best_params_result)),
+    ], voting='soft')
+
+    voting_classifier.fit(X_train, y_train_result)
 
     models = {
         'home_goals': home_goals_model,
         'away_goals': away_goals_model,
         'both_teams_to_score': both_teams_to_score_model,
-        'match_result': match_result_model
+        'match_result': voting_classifier
     }
 
     save_models(models, poly, scaler)
 
     logging.info('Models trained and saved successfully')
+
 
 def predict_match_outcome(team1: str, team2: str) -> Dict[str, Any]:
     try:
@@ -417,8 +469,8 @@ def predict_match_outcome(team1: str, team2: str) -> Dict[str, Any]:
     feature = poly.transform(feature)
     feature = scaler.transform(feature)
 
-    home_goals = round(models['home_goals'].predict(feature)[0], 2)
-    away_goals = round(models['away_goals'].predict(feature)[0], 2)
+    home_goals = max(0, round(models['home_goals'].predict(feature)[0], 2))  # Ensure non-negative predictions
+    away_goals = max(0, round(models['away_goals'].predict(feature)[0], 2))  # Ensure non-negative predictions
     both_teams_to_score = models['both_teams_to_score'].predict(feature)[0]
     match_result = models['match_result'].predict(feature)[0]
 
@@ -431,7 +483,7 @@ def predict_match_outcome(team1: str, team2: str) -> Dict[str, Any]:
 
 
 if __name__ == '__main__':
-    train_models()
+    # train_models()
     matches = [
         ("Germany", "Scotland"),
         ("Hungary", "Switzerland"),
@@ -448,8 +500,8 @@ if __name__ == '__main__':
     ]
     for match in matches:
         team1, team2 = match
-        predictions = predict_match_outcome(team2, team1)
-        print(f"Predicted outcome for {team2} vs {team1}")
+        predictions = predict_match_outcome(team1, team2)
+        print(f"Predicted outcome for {team1} vs {team2}")
         print(f"  Game Result Prediction: {predictions.get('match_result', 'N/A')}")
         print(f"  Predicted Home Goals: {predictions.get('home_goals', 'N/A'):.2f}")
         print(f"  Predicted Away Goals: {predictions.get('away_goals', 'N/A'):.2f}")
