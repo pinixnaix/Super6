@@ -1,20 +1,16 @@
 import os
 import logging
 import numpy as np
-import optuna
 import pandas as pd
 import joblib
 from influxdb_client import InfluxDBClient
 from typing import Dict, Any, List
-from keras.src.layers import Dense, BatchNormalization, Dropout
-from sklearn.linear_model import Ridge, LogisticRegression
-from sklearn.metrics import make_scorer, mean_absolute_error, accuracy_score
+from keras.src.callbacks import EarlyStopping
+from keras_core import Sequential
+from keras_core.src.layers import Dense, BatchNormalization, Dropout
+from keras_core.src.saving import load_model
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
-from sklearn.model_selection import train_test_split, KFold, cross_val_score
-from tensorflow.python import keras
-from tensorflow.python.keras.callbacks import EarlyStopping
-from xgboost import XGBClassifier, XGBRegressor
-from keras import Sequential
+from sklearn.model_selection import train_test_split
 from sklearn.exceptions import ConvergenceWarning
 import warnings
 
@@ -27,18 +23,17 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Configuration
 INFLUXDB_URL = os.getenv("INFLUXDB_URL", "http://localhost:8086")
 INFLUXDB_TOKEN = os.getenv("INFLUXDB_TOKEN", "my-super-secret-auth-token")
-INFLUXDB_ORG = os.getenv("INFLUXDB_ORG", "super6")
-INFLUXDB_BUCKET = os.getenv("INFLUXDB_BUCKET", "international")
+INFLUXDB_ORG = os.getenv("INFLUXDB_ORG", "PinaCode")
+INFLUXDB_BUCKET = os.getenv("INFLUXDB_BUCKET", "Euros2024")
 
 # File paths for model persistence
 MODEL_FILES = {
-    'home_goals': 'home_goals_model.pkl',
-    'away_goals': 'away_goals_model.pkl',
-    'both_teams_to_score': 'both_teams_to_score_model.pkl',
-    'match_result': 'match_result_model.pkl',
+    'home_goals': 'home_goals_model.h5',
+    'away_goals': 'away_goals_model.h5',
+    'both_teams_to_score': 'both_teams_to_score_model.h5',
+    'match_result': 'match_result_model.h5',
     'poly_features': 'poly_features.joblib',
-    'scaler': 'scaler.joblib',
-    'nn_match_results': 'nn_match_result_model'
+    'scaler': 'scaler.joblib'
 }
 
 UEFA_TEAM_RANKINGS = {
@@ -79,7 +74,7 @@ def get_team_games(team_name: str) -> pd.DataFrame:
     logging.info(f'Querying games for team: {team_name}')
     query = f'''
     from(bucket: "{INFLUXDB_BUCKET}")
-      |> range(start: -5y)
+      |> range(start: -9y)
       |> filter(fn: (r) => r._measurement == "match_results")
       |> filter(fn: (r) => r.home_team == "{team_name}" or r.away_team == "{team_name}")
       |> sort(columns: ["_time"], desc: true)
@@ -150,18 +145,14 @@ def create_dataset() -> tuple:
         else:
             targets_result.append(0)  # Draw
 
-    features = np.random.rand(100, 10)
-    home_goals = np.random.randint(0, 5, 100)
-    away_goals = np.random.randint(0, 5, 100)
-    both_teams_to_score = np.random.randint(0, 2, 100)
-    match_results = np.random.randint(0, 3, 100)
+    features = np.array(features).reshape(len(features), -1)
 
-    poly = PolynomialFeatures(degree=2)
+    poly = PolynomialFeatures(degree=2, interaction_only=True)
     features_poly = poly.fit_transform(features)
     scaler = StandardScaler().fit(features_poly)
     features_poly_scaled = scaler.transform(features_poly)
 
-    return features_poly_scaled, home_goals, away_goals, both_teams_to_score, match_results, poly, scaler
+    return features_poly_scaled, np.array(targets_home), np.array(targets_away), np.array(targets_bt), np.array(targets_result), poly, scaler
 
 
 def get_team_form(team: str, num_games: int = 4) -> Dict[str, float]:
@@ -358,66 +349,35 @@ def create_features(team1: str, team2: str) -> np.ndarray:
     return np.array(features)
 
 
-def tune_hyperparameters(features: np.ndarray, targets: np.ndarray, model_type: str) -> Dict:
-    logging.info(f'Tuning hyperparameters for {model_type} model')
-
-    def objective(trial: optuna.trial.Trial, features: np.ndarray, targets: np.ndarray, model_type: str) -> float:
-        if model_type == 'ridge':
-            alpha = trial.suggest_float('alpha', 1e-4, 1e2, log=True)
-            model = Ridge(alpha=alpha, positive=True)  # Ensure non-negative predictions
-            scorer = make_scorer(mean_absolute_error, greater_is_better=False)
-        elif model_type == 'logistic':
-            C = trial.suggest_float('C', 1e-4, 1e2, log=True)
-            model = LogisticRegression(C=C, max_iter=1000)
-            scorer = make_scorer(accuracy_score)
-        elif model_type == 'xgboost':
-            if len(np.unique(targets)) > 2:
-                model = XGBRegressor(objective='reg:squarederror')
-                scorer = make_scorer(mean_absolute_error, greater_is_better=False)
-            else:
-                model = XGBClassifier(objective='binary:logistic')
-                scorer = make_scorer(accuracy_score)
-            model.max_depth = trial.suggest_int('max_depth', 2, 10)
-            model.learning_rate = trial.suggest_float('learning_rate', 0.01, 0.3)
-            model.n_estimators = trial.suggest_int('n_estimators', 100, 1000)
-        else:
-            raise ValueError(f"Unsupported model type: {model_type}")
-
-        kf = KFold(n_splits=5)
-        scores = cross_val_score(model, features, targets, cv=kf, scoring=scorer)
-        return scores.mean()
-
-    study = optuna.create_study(direction='maximize' if model_type != 'ridge' else 'minimize')
-    study.optimize(lambda trial: objective(trial, features, targets, model_type), n_trials=50)
-    return study.best_params
-
-
-def create_nn_model(input_shape: int, layers: list, dropout_rate: float) -> Sequential:
+def create_nn_model(input_shape: int, layers: list, dropout_rate: float, output_units: int, output_activation: str) -> Sequential:
     model = Sequential()
     for units in layers:
         model.add(Dense(units, activation='relu', input_dim=input_shape if len(model.layers) == 0 else None))
         model.add(BatchNormalization())
         model.add(Dropout(dropout_rate))
-    model.add(Dense(3, activation='softmax'))  # Assuming 3 classes for match result
-    model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+    model.add(Dense(output_units, activation=output_activation))
+    model.compile(optimizer='adam', loss='mean_squared_error' if output_activation == 'linear' else 'sparse_categorical_crossentropy', metrics=['accuracy'] if output_activation == 'softmax' else ['mse'])
     return model
 
 
 def train_nn_models(X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray, y_val: np.ndarray,
-                    input_shape: int) -> list:
+                    input_shape: int, output_units: int, output_activation: str) -> Sequential:
     architectures = [
         {'layers': [128, 64, 32], 'dropout_rate': 0.5},
         {'layers': [256, 128, 64], 'dropout_rate': 0.3},
         {'layers': [64, 32, 16], 'dropout_rate': 0.4}
     ]
-    models = []
+    best_model = None
+    best_val_loss = float('inf')
     for arch in architectures:
-        model = create_nn_model(input_shape, arch['layers'], arch['dropout_rate'])
+        model = create_nn_model(input_shape, arch['layers'], arch['dropout_rate'], output_units, output_activation)
         early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
-        model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=100, batch_size=32,
-                  callbacks=[early_stopping])
-        models.append(model)
-    return models
+        model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=100, batch_size=32, callbacks=[early_stopping])
+        val_loss = model.evaluate(X_val, y_val, verbose=0)[0]
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            best_model = model
+    return best_model
 
 
 def train_models() -> None:
@@ -431,30 +391,20 @@ def train_models() -> None:
     _, _, y_train_bt, y_val_bt = train_test_split(features, both_teams_to_score, test_size=0.2, random_state=42)
     _, _, y_train_result, y_val_result = train_test_split(features, match_results, test_size=0.2, random_state=42)
 
-    # Train traditional models
-    logging.info('Tuning hyperparameters for home goals model')
-    best_params_home_goals = tune_hyperparameters(X_train, y_train_home, 'ridge')
-    logging.info('Tuning hyperparameters for away goals model')
-    best_params_away_goals = tune_hyperparameters(X_train, y_train_away, 'ridge')
-    logging.info('Tuning hyperparameters for both teams to score model')
-    best_params_bt = tune_hyperparameters(X_train, y_train_bt, 'logistic')
-    logging.info('Tuning hyperparameters for match result model')
-    best_params_result = tune_hyperparameters(X_train, y_train_result, 'xgboost')
-
-    home_goals_model = Ridge(**best_params_home_goals, positive=True).fit(X_train, y_train_home)
-    away_goals_model = Ridge(**best_params_away_goals, positive=True).fit(X_train, y_train_away)
-    both_teams_to_score_model = LogisticRegression(**best_params_bt, max_iter=1000).fit(X_train, y_train_bt)
-    match_result_model = XGBClassifier(**best_params_result).fit(X_train, y_train_result)
-
-    # Train neural network models for match result prediction
-    nn_models_result = train_nn_models(X_train, y_train_result, X_val, y_val_result, X_train.shape[1])
+    logging.info('Training neural network for home goals')
+    home_goals_model = train_nn_models(X_train, y_train_home, X_val, y_val_home, X_train.shape[1], 1, 'linear')
+    logging.info('Training neural network for away goals')
+    away_goals_model = train_nn_models(X_train, y_train_away, X_val, y_val_away, X_train.shape[1], 1, 'linear')
+    logging.info('Training neural network for both teams to score')
+    both_teams_to_score_model = train_nn_models(X_train, y_train_bt, X_val, y_val_bt, X_train.shape[1], 1, 'sigmoid')
+    logging.info('Training neural network for match result')
+    match_result_model = train_nn_models(X_train, y_train_result, X_val, y_val_result, X_train.shape[1], 3, 'softmax')
 
     models = {
         'home_goals': home_goals_model,
         'away_goals': away_goals_model,
         'both_teams_to_score': both_teams_to_score_model,
-        'match_result': match_result_model,
-        'nn_match_results': nn_models_result
+        'match_result': match_result_model
     }
 
     save_models(models, poly, scaler)
@@ -463,11 +413,7 @@ def train_models() -> None:
 
 def save_models(models: Dict[str, Any], poly_features: PolynomialFeatures, scaler: StandardScaler) -> None:
     for name, model in models.items():
-        if name == 'nn_match_results':
-            for i, nn_model in enumerate(model):
-                nn_model.save(f'{MODEL_FILES[name]}_{i}')
-        else:
-            joblib.dump(model, MODEL_FILES[name])
+        model.save(MODEL_FILES[name])
     joblib.dump(poly_features, MODEL_FILES['poly_features'])
     joblib.dump(scaler, MODEL_FILES['scaler'])
 
@@ -475,41 +421,33 @@ def save_models(models: Dict[str, Any], poly_features: PolynomialFeatures, scale
 def load_models() -> Dict[str, Any]:
     models = {}
     for name in MODEL_FILES.keys():
-        if name == 'nn_match_results':
-            nn_models = []
-            for i in range(3):  # Number of neural network models you saved
-                nn_models.append(keras.models.load_model(f'{MODEL_FILES[name]}_{i}'))
-            models[name] = nn_models
-        else:
+        if name in ['poly_features', 'scaler']:
             models[name] = joblib.load(MODEL_FILES[name])
+        else:
+            models[name] = load_model(MODEL_FILES[name])
     return models
 
 
 def predict_match_outcome(team1: str, team2: str) -> Dict[str, Any]:
     try:
         models = load_models()
-        poly = joblib.load(MODEL_FILES['poly_features'])
-        scaler = joblib.load(MODEL_FILES['scaler'])
+        poly = models['poly_features']
+        scaler = models['scaler']
 
         feature = create_features(team1, team2).reshape(1, -1)
         feature = poly.transform(feature)
         feature = scaler.transform(feature)
 
-        home_goals = models['home_goals'].predict(feature)[0]
-        away_goals = models['away_goals'].predict(feature)[0]
-        bt_score = models['both_teams_to_score'].predict(feature)[0]
-        match_result = models['match_result'].predict(feature)[0]
-
-        nn_results = []
-        for nn_model in models['nn_match_results']:
-            nn_results.append(nn_model.predict(feature).argmax(axis=1)[0])
+        home_goals = models['home_goals'].predict(feature)[0][0]
+        away_goals = models['away_goals'].predict(feature)[0][0]
+        bt_score = models['both_teams_to_score'].predict(feature)[0][0]
+        match_result = models['match_result'].predict(feature).argmax(axis=1)[0]
 
         return {
             'home_goals': home_goals,
             'away_goals': away_goals,
             'both_teams_to_score': bt_score,
-            'match_result': match_result,
-            'nn_match_results': nn_results
+            'match_result': match_result
         }
     except Exception as e:
         logging.error('Error predicting match outcome: %s', e)
@@ -537,7 +475,6 @@ if __name__ == '__main__':
         predictions = predict_match_outcome(team1, team2)
         print(f"Predicted outcome for {team1} vs {team2}")
         print(f"  Game Result Prediction: {predictions.get('match_result', 'N/A')}")
-        print(f"  Game Result Prediction: {predictions.get('nn_match_results', 'N/A')}")
         print(f"  Predicted Home Goals: {predictions.get('home_goals', 'N/A'):.2f}")
         print(f"  Predicted Away Goals: {predictions.get('away_goals', 'N/A'):.2f}")
         print(f"  Both Teams to Score: {predictions.get('both_teams_to_score', 'N/A')}\n")

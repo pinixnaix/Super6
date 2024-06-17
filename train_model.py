@@ -24,8 +24,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Configuration
 INFLUXDB_URL = os.getenv("INFLUXDB_URL", "http://localhost:8086")
 INFLUXDB_TOKEN = os.getenv("INFLUXDB_TOKEN", "my-super-secret-auth-token")
-INFLUXDB_ORG = os.getenv("INFLUXDB_ORG", "super6")
-INFLUXDB_BUCKET = os.getenv("INFLUXDB_BUCKET", "international")
+INFLUXDB_ORG = os.getenv("INFLUXDB_ORG", "PinaCode")
+INFLUXDB_BUCKET = os.getenv("INFLUXDB_BUCKET", "Euros2024")
 MODEL_FILES = {
     'home_goals': 'home_goals_model.joblib',
     'away_goals': 'away_goals_model.joblib',
@@ -88,7 +88,7 @@ def get_team_games(team_name: str) -> pd.DataFrame:
     logging.info(f'Querying games for team: {team_name}')
     query = f'''
     from(bucket: "{INFLUXDB_BUCKET}")
-      |> range(start: -4y)
+      |> range(start: -9y)
       |> filter(fn: (r) => r._measurement == "match_results")
       |> filter(fn: (r) => r.home_team == "{team_name}" or r.away_team == "{team_name}")
       |> sort(columns: ["_time"], desc: true)
@@ -229,7 +229,7 @@ def create_features(team1: str, team2: str) -> np.ndarray:
 def get_team_form(team: str, num_games: int = 4) -> Dict[str, float]:
     query = f'''
     from(bucket: "{INFLUXDB_BUCKET}")
-      |> range(start: -2y)
+      |> range(start: -3y)
       |> filter(fn: (r) => r._measurement == "match_results")
       |> filter(fn: (r) => r.home_team == "{team}" or r.away_team == "{team}")
       |> sort(columns: ["_time"], desc: true)
@@ -483,7 +483,7 @@ def predict_match_outcome(team1: str, team2: str) -> Dict[str, Any]:
 
 
 if __name__ == '__main__':
-    # train_models()
+    train_models()
     matches = [
         ("Germany", "Scotland"),
         ("Hungary", "Switzerland"),
