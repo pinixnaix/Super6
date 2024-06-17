@@ -5,10 +5,10 @@ import pandas as pd
 import joblib
 from influxdb_client import InfluxDBClient
 from typing import Dict, Any, List
-from keras.src.callbacks import EarlyStopping
-from keras_core import Sequential
-from keras_core.src.layers import Dense, BatchNormalization, Dropout
-from keras_core.src.saving import load_model
+from keras.callbacks import EarlyStopping
+from keras.models import Sequential
+from keras.layers import Dense, BatchNormalization, Dropout
+from keras.models import load_model
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.exceptions import ConvergenceWarning
@@ -43,10 +43,8 @@ UEFA_TEAM_RANKINGS = {
     "Austria": 27, "France": 2, "Turkey": 36, "Georgia": 48, "Portugal": 9, "Czech Republic": 28
 }
 
-
 class DataLoadError(Exception):
     pass
-
 
 def init_influxdb_client() -> Any:
     logging.info('Initializing InfluxDB client')
@@ -58,9 +56,7 @@ def init_influxdb_client() -> Any:
         logging.error('Error initializing InfluxDB client: %s', e)
         raise DataLoadError('Failed to initialize InfluxDB client')
 
-
 query_api = init_influxdb_client()
-
 
 def query_influxdb(query: str) -> Any:
     try:
@@ -68,7 +64,6 @@ def query_influxdb(query: str) -> Any:
     except Exception as e:
         logging.error('Error querying data: %s', e)
         return []
-
 
 def get_team_games(team_name: str) -> pd.DataFrame:
     logging.info(f'Querying games for team: {team_name}')
@@ -98,7 +93,6 @@ def get_team_games(team_name: str) -> pd.DataFrame:
     logging.info(f'Found {len(df_games)} games for team: {team_name}')
     return df_games
 
-
 def get_all_teams() -> List[str]:
     logging.info('Querying for all unique teams')
     query_teams = f'''
@@ -110,14 +104,11 @@ def get_all_teams() -> List[str]:
       |> distinct(column: "away_team")
     '''
     tables = query_influxdb(query_teams)
-    teams = {record.values.get("home_team") or record.values.get("away_team") for table in tables for record in
-             table.records}
+    teams = {record.values.get("home_team") or record.values.get("away_team") for table in tables for record in table.records}
     logging.info('Found %d unique teams', len(teams))
     return list(teams)
 
-
 def create_dataset() -> tuple:
-
     all_teams = get_all_teams()
     all_games = pd.concat([get_team_games(team) for team in all_teams], ignore_index=True)
 
@@ -154,7 +145,6 @@ def create_dataset() -> tuple:
 
     return features_poly_scaled, np.array(targets_home), np.array(targets_away), np.array(targets_bt), np.array(targets_result), poly, scaler
 
-
 def get_team_form(team: str, num_games: int = 4) -> Dict[str, float]:
     query = f'''
     from(bucket: "{INFLUXDB_BUCKET}")
@@ -187,11 +177,9 @@ def get_team_form(team: str, num_games: int = 4) -> Dict[str, float]:
         "home_total_scored": 0, "home_total_conceded": 0,
         "away_total_scored": 0, "away_total_conceded": 0,
         "home_over_0_5_scored": 0, "home_over_1_5_scored": 0, "home_over_2_5_scored": 0, "home_over_3_5_scored": 0,
-        "home_over_0_5_conceded": 0, "home_over_1_5_conceded": 0, "home_over_2_5_conceded": 0,
-        "home_over_3_5_conceded": 0,
+        "home_over_0_5_conceded": 0, "home_over_1_5_conceded": 0, "home_over_2_5_conceded": 0, "home_over_3_5_conceded": 0,
         "away_over_0_5_scored": 0, "away_over_1_5_scored": 0, "away_over_2_5_scored": 0, "away_over_3_5_scored": 0,
-        "away_over_0_5_conceded": 0, "away_over_1_5_conceded": 0, "away_over_2_5_conceded": 0,
-        "away_over_3_5_conceded": 0
+        "away_over_0_5_conceded": 0, "away_over_1_5_conceded": 0, "away_over_2_5_conceded": 0, "away_over_3_5_conceded": 0
     }
 
     for game in games:
@@ -255,7 +243,7 @@ def get_team_form(team: str, num_games: int = 4) -> Dict[str, float]:
                 form["away_over_1_5_conceded"] += 1
             if game["home_score"] > 2.5:
                 form["away_over_2_5_conceded"] += 1
-            if game["home_score"] > 3.5:
+            if game["home_score"] > 3.5":
                 form["away_over_3_5_conceded"] += 1
 
     num_games = len(games)
@@ -265,7 +253,6 @@ def get_team_form(team: str, num_games: int = 4) -> Dict[str, float]:
         form["avg_goal_dif"] /= num_games
 
     return form
-
 
 def get_games_between_teams(team1: str, team2: str) -> List[Dict]:
     logging.info(f'Querying head-to-head games between {team1} and {team2}')
@@ -295,10 +282,8 @@ def get_games_between_teams(team1: str, team2: str) -> List[Dict]:
     logging.info(f'Found {len(games)} head-to-head games between {team1} and {team2}')
     return games
 
-
 def valid_scores(home_score: int, away_score: int) -> bool:
     return home_score is not None and away_score is not None
-
 
 def create_features(team1: str, team2: str) -> np.ndarray:
     logging.info(f'Creating features for match: {team1} vs {team2}')
@@ -348,7 +333,6 @@ def create_features(team1: str, team2: str) -> np.ndarray:
     logging.info(f'Features created for match: {team1} vs {team2}')
     return np.array(features)
 
-
 def create_nn_model(input_shape: int, layers: list, dropout_rate: float, output_units: int, output_activation: str) -> Sequential:
     model = Sequential()
     for units in layers:
@@ -358,7 +342,6 @@ def create_nn_model(input_shape: int, layers: list, dropout_rate: float, output_
     model.add(Dense(output_units, activation=output_activation))
     model.compile(optimizer='adam', loss='mean_squared_error' if output_activation == 'linear' else 'sparse_categorical_crossentropy', metrics=['accuracy'] if output_activation == 'softmax' else ['mse'])
     return model
-
 
 def train_nn_models(X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray, y_val: np.ndarray,
                     input_shape: int, output_units: int, output_activation: str) -> Sequential:
@@ -378,7 +361,6 @@ def train_nn_models(X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray,
             best_val_loss = val_loss
             best_model = model
     return best_model
-
 
 def train_models() -> None:
     features, home_goals, away_goals, both_teams_to_score, match_results, poly, scaler = create_dataset()
@@ -410,13 +392,11 @@ def train_models() -> None:
     save_models(models, poly, scaler)
     logging.info('Models trained and saved successfully')
 
-
 def save_models(models: Dict[str, Any], poly_features: PolynomialFeatures, scaler: StandardScaler) -> None:
     for name, model in models.items():
         model.save(MODEL_FILES[name])
     joblib.dump(poly_features, MODEL_FILES['poly_features'])
     joblib.dump(scaler, MODEL_FILES['scaler'])
-
 
 def load_models() -> Dict[str, Any]:
     models = {}
@@ -426,7 +406,6 @@ def load_models() -> Dict[str, Any]:
         else:
             models[name] = load_model(MODEL_FILES[name])
     return models
-
 
 def predict_match_outcome(team1: str, team2: str) -> Dict[str, Any]:
     try:
@@ -452,7 +431,6 @@ def predict_match_outcome(team1: str, team2: str) -> Dict[str, Any]:
     except Exception as e:
         logging.error('Error predicting match outcome: %s', e)
         return {}
-
 
 if __name__ == '__main__':
     train_models()
