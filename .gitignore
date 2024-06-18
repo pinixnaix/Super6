@@ -1,2 +1,5 @@
 .env
 *.joblib
+*.h5
+*.keras
+*.pkl

@@ -10,7 +10,7 @@ from keras_core.src.callbacks import EarlyStopping
 from keras_core.src.layers import Dense, BatchNormalization, Dropout
 from keras_core.src.saving import load_model
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold
 from sklearn.exceptions import ConvergenceWarning
 import warnings
 
@@ -28,10 +28,10 @@ INFLUXDB_BUCKET = os.getenv("INFLUXDB_BUCKET", "international")
 
 # File paths for model persistence
 MODEL_FILES = {
-    'home_goals': 'home_goals_model.keras',
-    'away_goals': 'away_goals_model.keras',
-    'both_teams_to_score': 'both_teams_to_score_model.keras',
-    'match_result': 'match_result_model.keras',
+    'home_goals': 'home_goals_model.h5',
+    'away_goals': 'away_goals_model.h5',
+    'both_teams_to_score': 'both_teams_to_score_model.h5',
+    'match_result': 'match_result_model.h5',
     'poly_features': 'poly_features.joblib',
     'scaler': 'scaler.joblib',
     'dataset': 'nn_dataset.joblib'
@@ -174,7 +174,7 @@ def create_dataset(force_recreate: bool = False) -> tuple:
 def get_team_form(team: str, num_games: int = 4) -> Dict[str, float]:
     query = f'''
     from(bucket: "{INFLUXDB_BUCKET}")
-      |> range(start: -2y)
+      |> range(start: -3y)
       |> filter(fn: (r) => r._measurement == "match_results")
       |> filter(fn: (r) => r.home_team == "{team}" or r.away_team == "{team}")
       |> sort(columns: ["_time"], desc: true)
@@ -289,8 +289,7 @@ def get_games_between_teams(team1: str, team2: str) -> List[Dict]:
     from(bucket: "{INFLUXDB_BUCKET}")
       |> range(start: 0)
       |> filter(fn: (r) => r._measurement == "match_results")
-      |> filter(fn: (r) => (r.home_team == "{team1}" and r.away_team == "{team2}")
-       or (r.home_team == "{team2}" and r.away_team == "{team1}"))
+      |> filter(fn: (r) => (r.home_team == "{team1}" and r.away_team == "{team2}") or (r.home_team == "{team2}" and r.away_team == "{team1}"))
       |> sort(columns: ["_time"], desc: true)
       |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
     '''
@@ -401,31 +400,60 @@ def train_nn_models(X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray,
     return best_model
 
 
-def train_models() -> None:
+def cross_validate_and_train_models() -> None:
     features, home_goals, away_goals, both_teams_to_score, match_results, poly, scaler = create_dataset()
     if features.size == 0:
         logging.error('No data available for training models.')
         return
 
-    X_train, X_val, y_train_home, y_val_home = train_test_split(features, home_goals, test_size=0.2, random_state=42)
-    _, _, y_train_away, y_val_away = train_test_split(features, away_goals, test_size=0.2, random_state=42)
-    _, _, y_train_bt, y_val_bt = train_test_split(features, both_teams_to_score, test_size=0.2, random_state=42)
-    _, _, y_train_result, y_val_result = train_test_split(features, match_results, test_size=0.2, random_state=42)
+    kf = KFold(n_splits=5, shuffle=True, random_state=42)
 
-    logging.info('Training neural network for home goals')
-    home_goals_model = train_nn_models(X_train, y_train_home, X_val, y_val_home, X_train.shape[1], 1, 'linear')
-    logging.info('Training neural network for away goals')
-    away_goals_model = train_nn_models(X_train, y_train_away, X_val, y_val_away, X_train.shape[1], 1, 'linear')
-    logging.info('Training neural network for both teams to score')
-    both_teams_to_score_model = train_nn_models(X_train, y_train_bt, X_val, y_val_bt, X_train.shape[1], 1, 'sigmoid')
-    logging.info('Training neural network for match result')
-    match_result_model = train_nn_models(X_train, y_train_result, X_val, y_val_result, X_train.shape[1], 3, 'softmax')
+    best_home_goals_model, best_away_goals_model = None, None
+    best_bt_score_model, best_match_result_model = None, None
+    best_home_val_loss, best_away_val_loss = float('inf'), float('inf')
+    best_bt_val_loss, best_result_val_loss = float('inf'), float('inf')
+
+    for train_index, val_index in kf.split(features):
+        X_train, X_val = features[train_index], features[val_index]
+        y_train_home, y_val_home = home_goals[train_index], home_goals[val_index]
+        y_train_away, y_val_away = away_goals[train_index], away_goals[val_index]
+        y_train_bt, y_val_bt = both_teams_to_score[train_index], both_teams_to_score[val_index]
+        y_train_result, y_val_result = match_results[train_index], match_results[val_index]
+
+        logging.info('Training neural network for home goals')
+        home_goals_model = train_nn_models(X_train, y_train_home, X_val, y_val_home, X_train.shape[1], 1, 'linear')
+        val_loss = home_goals_model.evaluate(X_val, y_val_home, verbose=0)[0]
+        if val_loss < best_home_val_loss:
+            best_home_val_loss = val_loss
+            best_home_goals_model = home_goals_model
+
+        logging.info('Training neural network for away goals')
+        away_goals_model = train_nn_models(X_train, y_train_away, X_val, y_val_away, X_train.shape[1], 1, 'linear')
+        val_loss = away_goals_model.evaluate(X_val, y_val_away, verbose=0)[0]
+        if val_loss < best_away_val_loss:
+            best_away_val_loss = val_loss
+            best_away_goals_model = away_goals_model
+
+        logging.info('Training neural network for both teams to score')
+        bt_score_model = train_nn_models(X_train, y_train_bt, X_val, y_val_bt, X_train.shape[1], 1, 'sigmoid')
+        val_loss = bt_score_model.evaluate(X_val, y_val_bt, verbose=0)[0]
+        if val_loss < best_bt_val_loss:
+            best_bt_val_loss = val_loss
+            best_bt_score_model = bt_score_model
+
+        logging.info('Training neural network for match result')
+        match_result_model = train_nn_models(X_train, y_train_result, X_val, y_val_result, X_train.shape[1], 3,
+                                             'softmax')
+        val_loss = match_result_model.evaluate(X_val, y_val_result, verbose=0)[0]
+        if val_loss < best_result_val_loss:
+            best_result_val_loss = val_loss
+            best_match_result_model = match_result_model
 
     models = {
-        'home_goals': home_goals_model,
-        'away_goals': away_goals_model,
-        'both_teams_to_score': both_teams_to_score_model,
-        'match_result': match_result_model
+        'home_goals': best_home_goals_model,
+        'away_goals': best_away_goals_model,
+        'both_teams_to_score': best_bt_score_model,
+        'match_result': best_match_result_model
     }
 
     save_models(models, poly, scaler)
@@ -470,7 +498,7 @@ def predict_match_outcome(team1: str, team2: str) -> Dict[str, Any]:
         bt_score = models['both_teams_to_score'].predict(feature)[0][0]
         match_result = models['match_result'].predict(feature).argmax(axis=1)[0]
 
-        match_result_label = ['Draw', team1, team2][match_result]
+        match_result_label = ['draw', team1, team2][match_result]
         bt_score_label = 'Yes' if bt_score >= 0.5 else 'No'
 
         return {
@@ -485,7 +513,7 @@ def predict_match_outcome(team1: str, team2: str) -> Dict[str, Any]:
 
 
 if __name__ == '__main__':
-    train_models()
+    cross_validate_and_train_models()
     matches = [
         ("Germany", "Scotland"),
         ("Hungary", "Switzerland"),

@@ -5,24 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2e84cc45-dc20-4b3e-8731-0cacc14ea21a" name="Changes" comment="all files">
-      <change afterPath="$PROJECT_DIR$/away_goals_model.joblib" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/away_goals_model1.joblib" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/both_teams_to_score_model.joblib" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/both_teams_to_score_model1.joblib" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dataset.joblib" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dataset1.joblib" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/home_goals_model.joblib" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/home_goals_model1.joblib" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/match_result_model.joblib" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/match_result_model1.joblib" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/neural_networks_model.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/poly_features.joblib" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/poly_features1.joblib" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/scaler.joblib" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/scaler1.joblib" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/away_goals_model.pkl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/both_teams_to_score_model.pkl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/home_goals_model.pkl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/match_result_model.pkl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/train_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/train_model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/neural_networks_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/neural_networks_model.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -160,7 +150,21 @@
       <option name="project" value="LOCAL" />
       <updated>1718546331164</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="all files">
+      <created>1718613913019</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1718613913019</updated>
+    </task>
+    <task id="LOCAL-00013" summary="all files">
+      <created>1718613969964</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1718613969964</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
